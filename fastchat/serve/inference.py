@@ -272,7 +272,7 @@ def chat_loop(
         gptq_config,
         debug,
     )
-    is_chatglm = "chatglm" in str(type(model)).lower()
+    is_chatglm = "chatglm" in str(type(model)).lower() or "chatglm" in model_path
     is_fastchat_t5 = "t5" in str(type(model)).lower()
 
     # Hardcode T5 repetition penalty to be 1.2
