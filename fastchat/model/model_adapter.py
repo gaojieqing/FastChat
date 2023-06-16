@@ -354,9 +354,9 @@ class ChatGLMAdapter(BaseAdapter):
             model_path, trust_remote_code=True, **from_pretrained_kwargs
         )
         if "int4" in model_path:
-            model = model.float().cuda()
+            model = model.half().quantize(4).cuda()
         elif "int8" in model_path:
-            model = model.float().cuda()
+            model = model.half().quantize(8).cuda()
         if os.path.exists(f'{model_path}/adapter_model.bin'):
             print("init lora model")
             model = PeftModel.from_pretrained(model, model_path)
