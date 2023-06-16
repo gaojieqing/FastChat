@@ -647,6 +647,24 @@ class CamelAdapter(BaseAdapter):
     def get_default_conv_template(self, model_path: str) -> Conversation:
         return get_conv_template("vicuna_v1.1")
 
+class BaichuanAdapter(BaseAdapter):
+    """The model adapter for baichuan-inc/baichuan-7B"""
+
+    def match(self, model_path: str):
+        return "baichuan" in model_path
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
+        config = AutoConfig.from_pretrained(model_path, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path, config=config, torch_dtype=torch.float16,
+            trust_remote_code=True, device_map="auto", low_cpu_mem_usage=True
+        )
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("zero_shot")
+
 
 # Note: the registration order matters.
 # The one registered earlier has a higher matching priority.
@@ -675,7 +693,7 @@ register_model_adapter(WizardLMAdapter)
 register_model_adapter(ManticoreAdapter)
 register_model_adapter(GuanacoAdapter)
 register_model_adapter(CamelAdapter)
-
+register_model_adapter(BaichuanAdapter)
 
 # After all adapters, try the default base adapter.
 register_model_adapter(BaseAdapter)
