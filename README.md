@@ -122,6 +122,7 @@ The following models are tested:
 - [THUDM/chatglm-6b](https://huggingface.co/THUDM/chatglm-6b)
 - [timdettmers/guanaco-33b-merged](https://huggingface.co/timdettmers/guanaco-33b-merged)
 - [WizardLM/WizardLM-13B-V1.0](https://huggingface.co/WizardLM/WizardLM-13B-V1.0)
+- [baichuan-inc/baichuan-7B](https://huggingface.co/baichuan-inc/baichuan-7B)
 
 Help us [add more](https://github.com/lm-sys/FastChat/blob/main/docs/arena.md#how-to-add-a-new-model).
 
