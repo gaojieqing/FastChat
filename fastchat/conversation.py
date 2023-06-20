@@ -200,11 +200,11 @@ register_conv_template(
     Conversation(
         name="baichuan",
         system="",
-        roles=("用户", "百川"),
+        roles=("<human>", "<bot>"),
         messages=(),
         offset=0,
         sep_style=SeparatorStyle.DOLLY,
-        sep=" ",
+        sep="\n",
         sep2="</s>",
     )
 )
