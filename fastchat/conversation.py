@@ -200,7 +200,7 @@ register_conv_template(
     Conversation(
         name="baichuan",
         system="",
-        roles=("USER", "ASSISTANT"),
+        roles=("用户", "百川"),
         messages=(),
         offset=0,
         sep_style=SeparatorStyle.DOLLY,
