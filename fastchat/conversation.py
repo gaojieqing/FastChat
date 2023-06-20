@@ -204,6 +204,7 @@ register_conv_template(
         messages=(),
         offset=0,
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
+        sep="",
         sep2="\n",
         stop_str="<human>"
     )
