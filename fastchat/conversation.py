@@ -204,7 +204,7 @@ register_conv_template(
         messages=(),
         offset=0,
         sep_style=SeparatorStyle.DOLLY,
-        sep="\n",
+        sep=" ",
         sep2="</s>",
     )
 )
