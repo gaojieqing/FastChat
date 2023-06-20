@@ -669,6 +669,9 @@ class BaichuanAdapter(BaseAdapter):
             model_path, config=config, torch_dtype=torch.float16,
             trust_remote_code=True, device_map="auto", low_cpu_mem_usage=True
         )
+        if os.path.exists(f'{model_path}/adapter_model.bin'):
+            print("init lora model")
+            model = PeftModel.from_pretrained(model, model_path)
         return model, tokenizer
 
     def get_default_conv_template(self, model_path: str) -> Conversation:
