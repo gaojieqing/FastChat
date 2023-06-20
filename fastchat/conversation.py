@@ -198,6 +198,20 @@ def get_conv_template(name: str) -> Conversation:
 # A template with a one-shot conversation example
 register_conv_template(
     Conversation(
+        name="baichuan",
+        system="",
+        roles=("USER", "ASSISTANT"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.DOLLY,
+        sep=" ",
+        sep2="</s>",
+    )
+)
+
+# A template with a one-shot conversation example
+register_conv_template(
+    Conversation(
         name="one_shot",
         system="A chat between a curious human and an artificial intelligence assistant. "
         "The assistant gives helpful, detailed, and polite answers to the human's questions.",

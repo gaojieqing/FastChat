@@ -672,7 +672,7 @@ class BaichuanAdapter(BaseAdapter):
         return model, tokenizer
 
     def get_default_conv_template(self, model_path: str) -> Conversation:
-        return get_conv_template("zero_shot")
+        return get_conv_template("baichuan")
 
 
 # Note: the registration order matters.
