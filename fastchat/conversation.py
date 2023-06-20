@@ -203,9 +203,10 @@ register_conv_template(
         roles=("<human>", "<bot>"),
         messages=(),
         offset=0,
-        sep_style=SeparatorStyle.DOLLY,
+        sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep=" ",
         sep2="</s>",
+        stop_str="<human>"
     )
 )
 
