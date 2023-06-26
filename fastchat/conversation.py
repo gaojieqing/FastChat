@@ -72,7 +72,7 @@ class Conversation:
                     ret += role + ": "  # must be end with a space
             return ret
         elif self.sep_style == SeparatorStyle.ADD_NEW_LINE_SINGLE:
-            ret = self.system + self.sep
+            ret = "" if self.system == "" else self.system + self.sep
             for role, message in self.messages:
                 if message:
                     ret += role + "\n" + message + self.sep
@@ -321,6 +321,32 @@ register_conv_template(
     )
 )
 
+# OpenAssistant default template
+register_conv_template(
+    Conversation(
+        name="oasst_llama",
+        system="",
+        roles=("<|prompter|>", "<|assistant|>"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.NO_COLON_SINGLE,
+        sep="</s>",
+    )
+)
+
+# Tulu default template
+register_conv_template(
+    Conversation(
+        name="tulu",
+        system="",
+        roles=("<|user|>", "<|assistant|>"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.ADD_NEW_LINE_SINGLE,
+        sep="\n",
+    )
+)
+
 # StableLM Alpha default template
 register_conv_template(
     Conversation(
@@ -458,6 +484,37 @@ register_conv_template(
     )
 )
 
+# MPT-30b-chat default template
+register_conv_template(
+    Conversation(
+        name="mpt-30b-chat",
+        system="""<|im_start|>system
+A conversation between a user and an LLM-based AI assistant. The assistant gives helpful and honest answers.
+""",
+        roles=("<|im_start|>user", "<|im_start|>assistant"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.ADD_NEW_LINE_SINGLE,
+        sep="<|im_end|>",
+        stop_token_ids=[50278, 0],
+    )
+)
+
+# MPT-30b-instruct default template
+# reference: https://huggingface.co/mosaicml/mpt-30b-instruct#formatting
+register_conv_template(
+    Conversation(
+        name="mpt-30b-instruct",
+        system="Below is an instruction that describes a task. Write a response that appropriately completes the request.",
+        roles=("### Instruction", "### Response"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.ADD_NEW_LINE_SINGLE,
+        sep="\n\n",
+        stop_token_ids=[50278, 0],
+    )
+)
+
 # Bard default template
 # Reference: https://github.com/google/generative-ai-python/blob/9c99bcb474a991a97a2e7d62fcdb52db7ce40729/google/generativeai/discuss.py#L150
 #            https://github.com/google/generative-ai-python/blob/9c99bcb474a991a97a2e7d62fcdb52db7ce40729/google/generativeai/discuss.py#L40
@@ -586,6 +643,7 @@ register_conv_template(
         ],  # it better only put special tokens here, because tokenizer only remove special tokens
     )
 )
+
 # ChagGPT default template
 register_conv_template(
     Conversation(
@@ -596,6 +654,21 @@ register_conv_template(
         offset=0,
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
         sep="\n",
+    )
+)
+
+# tigerbot template
+register_conv_template(
+    Conversation(
+        name="tigerbot",
+        system="A chat between a curious user and an artificial intelligence assistant. "
+        "The assistant gives helpful, detailed, and polite answers to the user's questions.",
+        roles=("### Instruction", "### Response"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.ROBIN,
+        sep="\n\n",
+        stop_str="###",
     )
 )
 
