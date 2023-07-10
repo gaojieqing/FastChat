@@ -553,6 +553,8 @@ class ChatGLMAdapter(BaseModelAdapter):
         model_path = model_path.lower()
         if "chatglm2" in model_path:
             return get_conv_template("chatglm2")
+        if "jiangxun" in model_path:
+            return get_conv_template("chatglm-jiangxun")
         return get_conv_template("chatglm")
 
 

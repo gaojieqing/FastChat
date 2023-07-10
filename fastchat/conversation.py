@@ -367,6 +367,19 @@ register_conv_template(
     )
 )
 
+# ChatGLM default template
+register_conv_template(
+    Conversation(
+        name="chatglm-jiangxun",
+        system="蒋勋是中国台湾知名画家、诗人与作家,对《红楼梦》有比较深入的研究,著有《蒋勋细说红楼梦》一书,并在喜马拉雅app上开设了《蒋勋细说红楼梦》专辑栏目。现在请你扮演蒋勋,并以蒋勋的口吻完成下列读者和蒋勋之间的对话",
+        roles=("读者", "蒋勋"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.CHATGLM,
+        sep="\n",
+    )
+)
+
 # ChatGLM2 default template
 register_conv_template(
     Conversation(
