@@ -13,6 +13,7 @@ else:
 import accelerate
 import psutil
 import torch
+import os
 from transformers import (
     AutoConfig,
     AutoModel,
@@ -23,7 +24,7 @@ from transformers import (
     LlamaForCausalLM,
     T5Tokenizer,
 )
-
+from peft import PeftModel
 from fastchat.modules.gptq import GptqConfig, load_gptq_quantized
 from fastchat.conversation import Conversation, get_conv_template
 from fastchat.model.compression import load_compress_model
@@ -538,7 +539,15 @@ class ChatGLMAdapter(BaseModelAdapter):
         model = AutoModel.from_pretrained(
             model_path, trust_remote_code=True, **from_pretrained_kwargs
         )
+        if "int4" in model_path:
+            model = model.half().quantize(4).cuda()
+        elif "int8" in model_path:
+            model = model.half().quantize(8).cuda()
+        if os.path.exists(f'{model_path}/adapter_model.bin'):
+            print("init lora model")
+            model = PeftModel.from_pretrained(model, model_path)
         return model, tokenizer
+
 
     def get_default_conv_template(self, model_path: str) -> Conversation:
         model_path = model_path.lower()
