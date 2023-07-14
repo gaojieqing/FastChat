@@ -1156,8 +1156,9 @@ class PolyLMChatAdapter(BaseModelAdapter):
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
             device_map="auto",
+            torch_dtype=torch.float16,
             **from_pretrained_kwargs,
-        ).half()
+        )
         tokenizer = AutoTokenizer.from_pretrained(
             model_path,
             use_fast=False
