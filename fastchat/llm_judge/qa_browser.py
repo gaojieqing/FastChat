@@ -183,6 +183,16 @@ def single_to_gradio_chat_mds(question, ans, turn=None):
     return mds
 
 
+def build_question_selector_map():
+    global question_selector_map, category_selector_map
+
+    # Build question selector map
+    for q in questions:
+        preview = f"{q['question_id']}: " + q["turns"][0][:128] + "..."
+        question_selector_map[preview] = q
+        category_selector_map[q["category"]].append(preview)
+
+
 def build_pairwise_browser_tab():
     global question_selector_map, category_selector_map
 
@@ -191,11 +201,6 @@ def build_pairwise_browser_tab():
     num_turns = 2
     side_names = ["A", "B"]
 
-    # Build question selector map
-    for q in questions:
-        preview = f"{q['question_id']}: " + q["turns"][0][:128] + "..."
-        question_selector_map[preview] = q
-        category_selector_map[q["category"]].append(preview)
     question_selector_choices = list(question_selector_map.keys())
     category_selector_choices = list(category_selector_map.keys())
 
@@ -269,11 +274,6 @@ def build_single_answer_browser_tab():
     num_turns = 2
     side_names = ["A"]
 
-    # # Build question selector map
-    # for q in questions:
-    #     preview = f"{q['question_id']}: " + q["turns"][0][:128] + "..."
-    #     question_selector_map[preview] = q
-    #     category_selector_map[q["category"]].append(preview)
     question_selector_choices = list(question_selector_map.keys())
     category_selector_choices = list(category_selector_map.keys())
 
@@ -354,10 +354,12 @@ block_css = """
 
 def load_demo():
     dropdown_update = gr.Dropdown.update(value=list(category_selector_map.keys())[0])
-    return dropdown_update
+    return dropdown_update, dropdown_update
 
 
 def build_demo():
+    build_question_selector_map()
+
     with gr.Blocks(
         title="MT-Bench Browser",
         theme=gr.themes.Base(text_size=gr.themes.sizes.text_lg),
@@ -373,8 +375,7 @@ The code to generate answers and judgments is at [fastchat.llm_judge](https://gi
             (category_selector,) = build_single_answer_browser_tab()
         with gr.Tab("Pairwise Comparison"):
             (category_selector2,) = build_pairwise_browser_tab()
-        demo.load(load_demo, [], [category_selector])
-        demo.load(load_demo, [], [category_selector2])
+        demo.load(load_demo, [], [category_selector, category_selector2])
 
     return demo
 

@@ -3,11 +3,11 @@ Conversation prompt templates.
 """
 
 import dataclasses
-from enum import auto, Enum
+from enum import auto, IntEnum
 from typing import List, Any, Dict
 
 
-class SeparatorStyle(Enum):
+class SeparatorStyle(IntEnum):
     """Separator styles."""
 
     ADD_COLON_SINGLE = auto()
@@ -784,6 +784,21 @@ register_conv_template(
         sep2="<eoa>",
         stop_token_ids=[1, 103028],
         stop_str="<|User|>",
+    )
+)
+
+# StarChat template
+register_conv_template(
+    Conversation(
+        name="starchat",
+        system="<system>\n",
+        roles=("<|user|>", "<|assistant|>"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.CHATML,
+        sep="<|end|>",
+        stop_token_ids=[0, 49155],
+        stop_str="<|end|>",
     )
 )
 
