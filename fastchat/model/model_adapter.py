@@ -1157,7 +1157,7 @@ class PolyLMChatAdapter(BaseModelAdapter):
             model_path,
             device_map="auto",
             **from_pretrained_kwargs,
-        )
+        ).half()
         tokenizer = AutoTokenizer.from_pretrained(
             model_path,
             use_fast=False
