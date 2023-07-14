@@ -1146,6 +1146,28 @@ class InternLMChatAdapter(BaseModelAdapter):
         return get_conv_template("internlm-chat")
 
 
+class PolyLMChatAdapter(BaseModelAdapter):
+    """The model adapter for DAMO-NLP-MT/polylm-13b"""
+
+    def match(self, model_path: str):
+        return "polylm" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            device_map="auto",
+            **from_pretrained_kwargs,
+        )
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path,
+            use_fast=False
+        )
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("one_shot")
+
+
 class StarChatAdapter(BaseModelAdapter):
     """The model adapter for HuggingFaceH4/starchat-beta"""
 

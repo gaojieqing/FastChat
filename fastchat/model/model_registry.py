@@ -229,3 +229,9 @@ register_model_info(
     "https://huggingface.co/internlm/internlm-chat-7b",
     "InternLM is a multi-language large-scale language model (LLM), developed by SHLAB.",
 )
+register_model_info(
+    ["polylm-1.7b", "polylm-13b", "polylm-multialpaca-13b", "nlp_polylm_13b_text_generation"],
+    "PolyLM",
+    "https://huggingface.co/DAMO-NLP-MT/polylm-13b",
+    "PolyLM is a large-scale language model proficient in multiple languages. ",
+)
