@@ -829,6 +829,23 @@ register_conv_template(
     )
 )
 
+# polylm-multialpaca-13b template
+register_conv_template(
+    # source: https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/f5f47be2adbbdceb784f334d6fa1ca2c73e65097/modeling_baichuan.py#L507
+    # https://huggingface.co/baichuan-inc/Baichuan-13B-Chat/blob/main/generation_config.json
+    Conversation(
+        name="polylm-multialpaca",
+        system="A chat between a curious <reserved_102> and a <reserved_103>. The <reserved_103> gives helpful, detailed, and polite answers to the <reserved_102>'s questions.\n\n",
+        roles=("<reserved_102>", "<reserved_103>"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.NO_COLON_TWO,
+        sep="",
+        sep2="</s>",
+        stop_token_ids=[2, 195],
+    )
+)
+
 if __name__ == "__main__":
     conv = get_conv_template("vicuna_v1.1")
     conv.append_message(conv.roles[0], "Hello!")
