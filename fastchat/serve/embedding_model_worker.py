@@ -309,6 +309,5 @@ if __name__ == "__main__":
         args.limit_worker_concurrency,
         no_register=args.no_register,
         device=args.device,
-        stream_interval=args.stream_interval,
     )
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
