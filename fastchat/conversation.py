@@ -1,5 +1,8 @@
 """
 Conversation prompt templates.
+
+We kindly request that you import fastchat instead of copying this file if you want to use it.
+You can contribute back the changes you want to make.
 """
 
 import dataclasses
@@ -859,6 +862,20 @@ register_conv_template(
         sep=" ",
         sep2=" </s><s>",
         stop_token_ids=[2],
+    )
+)
+
+register_conv_template(
+    Conversation(
+        name="cutegpt",
+        system="",
+        roles=("问：", "答：\n"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.NO_COLON_TWO,
+        sep="\n",
+        sep2="\n",
+        stop_str="<end>",
     )
 )
 
