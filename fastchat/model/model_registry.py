@@ -56,19 +56,19 @@ register_model_info(
     "PaLM 2 for Chat (chat-bison@001) by Google",
 )
 register_model_info(
-    ["llama-2-13b-chat", "llama-2-7b-chat", "llama-2-34b-chat", "llama-2-70b-chat"],
+    ["llama-2-70b-chat", "llama-2-34b-chat", "llama-2-13b-chat", "llama-2-7b-chat"],
     "Llama 2",
     "https://ai.meta.com/llama/",
     "open foundation and fine-tuned chat models by Meta",
 )
 register_model_info(
     [
+        "vicuna-33b",
+        "vicuna-33b-v1.3",
         "vicuna-13b",
         "vicuna-13b-v1.3",
         "vicuna-7b",
         "vicuna-7b-v1.3",
-        "vicuna-33b",
-        "vicuna-33b-v1.3",
     ],
     "Vicuna",
     "https://lmsys.org/blog/2023-03-30-vicuna/",
@@ -79,6 +79,12 @@ register_model_info(
     "WizardLM",
     "https://github.com/nlpxucan/WizardLM",
     "an instruction-following LLM using evol-instruct by Microsoft",
+)
+register_model_info(
+    ["wizardcoder-15b-v1.0"],
+    "WizardLM",
+    "https://github.com/nlpxucan/WizardLM/tree/main/WizardCoder",
+    "Empowering Code Large Language Models with Evol-Instruct",
 )
 register_model_info(
     ["mpt-7b-chat", "mpt-30b-chat"],
@@ -235,4 +241,10 @@ register_model_info(
     "InternLM",
     "https://huggingface.co/internlm/internlm-chat-7b",
     "InternLM is a multi-language large-scale language model (LLM), developed by SHLAB.",
+)
+register_model_info(
+    ["Qwen-7B-Chat"],
+    "Qwen",
+    "https://huggingface.co/Qwen/Qwen-7B-Chat",
+    "Qwen is a multi-language large-scale language model (LLM), developed by Damo Academy.",
 )

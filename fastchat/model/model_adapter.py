@@ -26,8 +26,12 @@ from transformers import (
 )
 
 from fastchat.modules.gptq import GptqConfig, load_gptq_quantized
+from fastchat.modules.awq import AWQConfig, load_awq_quantized
 from fastchat.conversation import Conversation, get_conv_template
 from fastchat.model.compression import load_compress_model
+from fastchat.model.llama_condense_monkey_patch import (
+    replace_llama_with_condense,
+)
 from fastchat.model.model_chatglm import generate_stream_chatglm
 from fastchat.model.model_codet5p import generate_stream_codet5p
 from fastchat.model.model_falcon import generate_stream_falcon
@@ -58,12 +62,11 @@ class BaseModelAdapter:
                 model_path,
                 use_fast=self.use_fast_tokenizer,
                 revision=revision,
+                trust_remote_code=True,
             )
         except TypeError:
             tokenizer = AutoTokenizer.from_pretrained(
-                model_path,
-                use_fast=False,
-                revision=revision,
+                model_path, use_fast=False, revision=revision, trust_remote_code=True
             )
         try:
             model = AutoModelForCausalLM.from_pretrained(
@@ -144,17 +147,17 @@ def raise_warning_for_incompatible_cpu_offloading_configuration(
 
 def load_model(
     model_path: str,
-    device: str,
-    num_gpus: int,
+    device: str = "cuda",
+    num_gpus: int = 1,
     max_gpu_memory: Optional[str] = None,
     load_8bit: bool = False,
     cpu_offloading: bool = False,
     gptq_config: Optional[GptqConfig] = None,
+    awq_config: Optional[AWQConfig] = None,
     revision: str = "main",
     debug: bool = False,
 ):
     """Load a model from Hugging Face."""
-
     # get model adapter
     adapter = get_model_adapter(model_path)
 
@@ -213,12 +216,38 @@ def load_model(
                 "8-bit quantization is not supported for multi-gpu inference."
             )
         else:
-            return adapter.load_compress_model(
+            model, tokenizer = adapter.load_compress_model(
                 model_path=model_path,
                 device=device,
                 torch_dtype=kwargs["torch_dtype"],
                 revision=revision,
             )
+            if debug:
+                print(model)
+            return model, tokenizer
+    elif awq_config and awq_config.wbits < 16:
+        assert (
+            awq_config.wbits == 4
+        ), "Currently we only support 4-bit inference for AWQ."
+        model, tokenizer = load_awq_quantized(model_path, awq_config, device)
+        if num_gpus != 1:
+            device_map = accelerate.infer_auto_device_map(
+                model,
+                max_memory=kwargs["max_memory"],
+                no_split_module_classes=[
+                    "OPTDecoderLayer",
+                    "LlamaDecoderLayer",
+                    "BloomBlock",
+                    "MPTBlock",
+                    "DecoderLayer",
+                ],
+            )
+            model = accelerate.dispatch_model(
+                model, device_map=device_map, offload_buffers=True
+            )
+        else:
+            model.to(device)
+        return model, tokenizer
     elif gptq_config and gptq_config.wbits < 16:
         model, tokenizer = load_gptq_quantized(model_path, gptq_config)
         if num_gpus != 1:
@@ -336,7 +365,7 @@ def add_model_args(parser):
     parser.add_argument(
         "--max-gpu-memory",
         type=str,
-        help="The maximum memory per gpu. Use a string like '13Gib'",
+        help="The maximum memory per GPU for storing model weights. Use a string like '13Gib'",
     )
     parser.add_argument(
         "--load-8bit", action="store_true", help="Use 8-bit quantization"
@@ -350,25 +379,44 @@ def add_model_args(parser):
         "--gptq-ckpt",
         type=str,
         default=None,
-        help="Load quantized model. The path to the local GPTQ checkpoint.",
+        help="Used for GPTQ. The path to the local GPTQ checkpoint.",
     )
     parser.add_argument(
         "--gptq-wbits",
         type=int,
         default=16,
         choices=[2, 3, 4, 8, 16],
-        help="#bits to use for quantization",
+        help="Used for GPTQ. #bits to use for quantization",
     )
     parser.add_argument(
         "--gptq-groupsize",
         type=int,
         default=-1,
-        help="Groupsize to use for quantization; default uses full row.",
+        help="Used for GPTQ. Groupsize to use for quantization; default uses full row.",
     )
     parser.add_argument(
         "--gptq-act-order",
         action="store_true",
-        help="Whether to apply the activation order GPTQ heuristic",
+        help="Used for GPTQ. Whether to apply the activation order GPTQ heuristic",
+    )
+    parser.add_argument(
+        "--awq-ckpt",
+        type=str,
+        default=None,
+        help="Used for AWQ. Load quantized model. The path to the local AWQ checkpoint.",
+    )
+    parser.add_argument(
+        "--awq-wbits",
+        type=int,
+        default=16,
+        choices=[4, 16],
+        help="Used for AWQ. #bits to use for AWQ quantization",
+    )
+    parser.add_argument(
+        "--awq-groupsize",
+        type=int,
+        default=-1,
+        help="Used for AWQ. Groupsize to use for AWQ quantization; default uses full row.",
     )
 
 
@@ -527,14 +575,10 @@ class LongChatAdapter(BaseModelAdapter):
 
     def load_model(self, model_path: str, from_pretrained_kwargs: dict):
         revision = from_pretrained_kwargs.get("revision", "main")
-        config = AutoConfig.from_pretrained(model_path, revision=revision)
 
         # Apply monkey patch, TODO(Dacheng): Add flash attention support
-        from fastchat.model.llama_condense_monkey_patch import (
-            replace_llama_with_condense,
-        )
-
-        replace_llama_with_condense(config.rope_condense_ratio)
+        config = AutoConfig.from_pretrained(model_path, revision=revision)
+        replace_llama_with_condense(config.rope_scaling["factor"])
 
         tokenizer = AutoTokenizer.from_pretrained(
             model_path, use_fast=self.use_fast_tokenizer, revision=revision
@@ -1194,6 +1238,150 @@ class CuteGPTAdapter(BaseModelAdapter):
         return get_conv_template("cutegpt")
 
 
+class OpenOrcaAdapter(BaseModelAdapter):
+    "Model adapater for Open-Orca models (e.g., Open-Orca/OpenOrcaxOpenChat-Preview2-13B)" ""
+
+    use_fast_tokenizer = False
+
+    def match(self, model_path: str):
+        return "openorca" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        revision = from_pretrained_kwargs.get("revision", "main")
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path, use_fast=self.use_fast_tokenizer, revision=revision
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            low_cpu_mem_usage=True,
+            **from_pretrained_kwargs,
+        ).eval()
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("open-orca")
+
+
+class WizardCoderAdapter(BaseModelAdapter):
+    """The model adapter for WizardCoder"""
+
+    use_fast_tokenizer = False
+
+    def match(self, model_path: str):
+        return "wizardcoder" in model_path.lower()
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        # Same as Alpaca, see :
+        # https://github.com/nlpxucan/WizardLM/blob/main/WizardCoder/src/inference_wizardcoder.py#L60
+        return get_conv_template("alpaca")
+
+
+class QwenChatAdapter(BaseModelAdapter):
+    """The model adapter for Qwen/Qwen-7B-Chat
+    To run this model, you need to ensure additional flash attention installation:
+    ``` bash
+    git clone https://github.com/Dao-AILab/flash-attention
+    cd flash-attention && pip install .
+    pip install csrc/layer_norm
+    pip install csrc/rotary
+    ```
+
+    Since from 2.0, the following change happened
+    - `flash_attn_unpadded_func` -> `flash_attn_varlen_func`
+    - `flash_attn_unpadded_qkvpacked_func` -> `flash_attn_varlen_qkvpacked_func`
+    - `flash_attn_unpadded_kvpacked_func` -> `flash_attn_varlen_kvpacked_func`
+    You may need to revise the code in: https://huggingface.co/Qwen/Qwen-7B-Chat/blob/main/modeling_qwen.py#L69
+    to from flash_attn.flash_attn_interface import flash_attn_varlen_func as flash_attn_unpadded_func
+    """
+
+    def match(self, model_path: str):
+        return "qwen" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        from transformers.generation import GenerationConfig
+
+        revision = from_pretrained_kwargs.get("revision", "main")
+        config = AutoConfig.from_pretrained(
+            model_path,
+            trust_remote_code=True,
+        )
+        config.use_flash_attn = False
+        config.fp16 = True
+        generation_config = GenerationConfig.from_pretrained(
+            model_path, trust_remote_code=True
+        )
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            config=config,
+            low_cpu_mem_usage=True,
+            trust_remote_code=True,
+            **from_pretrained_kwargs,
+        ).eval()
+        if hasattr(model.config, "use_dynamic_ntk") and model.config.use_dynamic_ntk:
+            model.config.max_sequence_length = 16384
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path, trust_remote_code=True, revision=revision
+        )
+        tokenizer.eos_token_id = config.eos_token_id
+        tokenizer.bos_token_id = config.bos_token_id
+        tokenizer.pad_token_id = generation_config.pad_token_id
+        model.config.eos_token_id = tokenizer.eos_token_id
+        model.config.bos_token_id = tokenizer.bos_token_id
+        model.config.pad_token_id = tokenizer.pad_token_id
+
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("qwen-7b-chat")
+
+
+class BGEAdapter(BaseModelAdapter):
+    """The model adapter for BGE"""
+
+    use_fast_tokenizer = False
+
+    def match(self, model_path: str):
+        return "bge" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        revision = from_pretrained_kwargs.get("revision", "main")
+        model = AutoModel.from_pretrained(
+            model_path,
+            **from_pretrained_kwargs,
+        )
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path, trust_remote_code=True, revision=revision
+        )
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("one_shot")
+
+
+class AquilaChatAdapter(BaseModelAdapter):
+    """The model adapter for BAAI/AquilaChat-7B"""
+
+    def match(self, model_path: str):
+        return "aquila" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        revision = from_pretrained_kwargs.get("revision", "main")
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            low_cpu_mem_usage=True,
+            trust_remote_code=True,
+            **from_pretrained_kwargs,
+        )
+        model = model.eval()
+        tokenizer = AutoTokenizer.from_pretrained(
+            model_path, trust_remote_code=True, revision=revision
+        )
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("aquila-chat")
+
+
 # Note: the registration order matters.
 # The one registered earlier has a higher matching priority.
 register_model_adapter(PeftModelAdapter)
@@ -1239,6 +1427,11 @@ register_model_adapter(InternLMChatAdapter)
 register_model_adapter(StarChatAdapter)
 register_model_adapter(Llama2Adapter)
 register_model_adapter(CuteGPTAdapter)
+register_model_adapter(OpenOrcaAdapter)
+register_model_adapter(WizardCoderAdapter)
+register_model_adapter(QwenChatAdapter)
+register_model_adapter(AquilaChatAdapter)
+register_model_adapter(BGEAdapter)
 
 # After all adapters, try the default base adapter.
 register_model_adapter(BaseModelAdapter)

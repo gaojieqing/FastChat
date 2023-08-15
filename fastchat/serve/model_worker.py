@@ -8,7 +8,7 @@ import logging
 import json
 import os
 import time
-from typing import List
+from typing import List, Optional
 import threading
 import uuid
 
@@ -43,6 +43,7 @@ from fastchat.model.model_adapter import (
     get_generate_stream_function,
 )
 from fastchat.modules.gptq import GptqConfig
+from fastchat.modules.awq import AWQConfig
 from fastchat.utils import build_logger, pretty_print_semaphore, get_context_length
 
 
@@ -129,7 +130,7 @@ class BaseModelWorker:
                 )
                 exist = ret.json()["exist"]
                 break
-            except requests.exceptions.RequestException as e:
+            except (requests.exceptions.RequestException, KeyError) as e:
                 logger.error(f"heart beat error: {e}")
             time.sleep(5)
 
@@ -187,7 +188,8 @@ class ModelWorker(BaseModelWorker):
         max_gpu_memory: str,
         load_8bit: bool = False,
         cpu_offloading: bool = False,
-        gptq_config: bool = None,
+        gptq_config: Optional[GptqConfig] = None,
+        awq_config: Optional[AWQConfig] = None,
         stream_interval: int = 2,
         conv_template: str = None,
     ):
@@ -204,12 +206,13 @@ class ModelWorker(BaseModelWorker):
         logger.info(f"Loading the model {self.model_names} on worker {worker_id} ...")
         self.model, self.tokenizer = load_model(
             model_path,
-            device,
-            num_gpus,
-            max_gpu_memory,
-            load_8bit,
-            cpu_offloading,
-            gptq_config,
+            device=device,
+            num_gpus=num_gpus,
+            max_gpu_memory=max_gpu_memory,
+            load_8bit=load_8bit,
+            cpu_offloading=cpu_offloading,
+            gptq_config=gptq_config,
+            awq_config=awq_config,
         )
         self.device = device
         if self.tokenizer.pad_token == None:
@@ -273,6 +276,8 @@ class ModelWorker(BaseModelWorker):
             )  # llama supports batch inference
             is_chatglm = "chatglm" in str(type(self.model))
             is_t5 = "t5" in str(type(self.model))
+            is_bert = "bert" in str(type(self.model))
+
             if is_llama:
                 encoding = tokenizer.batch_encode_plus(
                     params["input"], padding=True, return_tensors="pt"
@@ -292,6 +297,22 @@ class ModelWorker(BaseModelWorker):
                 ret = {
                     "embedding": normalized_embeddings.tolist(),
                     "token_num": torch.sum(attention_mask).item(),
+                }
+            elif is_bert:
+                embedding = []
+                token_num = 0
+                for text in params["input"]:
+                    input_ids = tokenizer.encode(text, return_tensors="pt").to(
+                        self.device
+                    )
+                    model_output = self.model(input_ids)
+                    data = model_output[0][:, 0]
+                    data = F.normalize(torch.mean(data, dim=0), p=2, dim=0)
+                    embedding.append(data.tolist())
+                    token_num += len(input_ids[0])
+                ret = {
+                    "embedding": embedding,
+                    "token_num": token_num,
                 }
             else:
                 embedding = []
@@ -437,6 +458,11 @@ if __name__ == "__main__":
         groupsize=args.gptq_groupsize,
         act_order=args.gptq_act_order,
     )
+    awq_config = AWQConfig(
+        ckpt=args.awq_ckpt or args.model_path,
+        wbits=args.awq_wbits,
+        groupsize=args.awq_groupsize,
+    )
 
     worker = ModelWorker(
         args.controller_address,
@@ -452,6 +478,7 @@ if __name__ == "__main__":
         load_8bit=args.load_8bit,
         cpu_offloading=args.cpu_offloading,
         gptq_config=gptq_config,
+        awq_config=awq_config,
         stream_interval=args.stream_interval,
         conv_template=args.conv_template,
     )
