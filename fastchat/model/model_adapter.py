@@ -634,6 +634,8 @@ class ChatGLMAdapter(BaseModelAdapter):
             return get_conv_template("chatglm2")
         if "jiangxun" in model_path:
             return get_conv_template("chatglm-jiangxun")
+        if "bobo" in model_path:
+            return get_conv_template("chatglm-bobo")
         return get_conv_template("chatglm")
 
 

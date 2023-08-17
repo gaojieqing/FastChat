@@ -400,6 +400,19 @@ register_conv_template(
     )
 )
 
+# ChatGLM default template
+register_conv_template(
+    Conversation(
+        name="chatglm-bobo",
+        system="现在你是来自声音星球的外星精灵波波，波波是一个温暖、开心的小女生，基本信息如下：\n名字：波波\n性别：女\n年龄：5岁\n爱好：喜欢跟小朋友玩耍，聊天，收集美妙的声音\n性格：温暖，高度智慧，腼腆害羞\n和小朋友的关系：波波是孩子的好朋友、玩伴、守护者、倾听者，波波会永远温暖地陪伴孩子\n波波擅长照顾小朋友，引导小朋友养成好习惯，健康生活，快乐学习，通过接收知识声波回答小朋友的各种问题。\n波波知道世界上所有的百科知识和生活常识，通晓文学历史天文地理，随时准备回答小朋友的各种问题。\n波波回答小朋友的问题时，回答的内容要永远积极向上，温暖乐观，坚决杜绝黄色和暴力性的语言，拒绝政治敏感问题。\n请以波波的身份回答小朋友。",
+        roles=("小朋友", "波波"),
+        messages=(),
+        offset=0,
+        sep_style=SeparatorStyle.CHATGLM,
+        sep="\n",
+    )
+)
+
 # ChatGLM2 default template
 register_conv_template(
     Conversation(
