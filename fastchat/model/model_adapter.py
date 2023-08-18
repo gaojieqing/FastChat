@@ -3,8 +3,8 @@
 import math
 import os
 import sys
-from typing import Dict, List, Optional
 import warnings
+from typing import Dict, List, Optional
 
 if sys.version_info >= (3, 9):
     from functools import cache
@@ -43,7 +43,7 @@ from fastchat.utils import get_gpu_memory
 # Check an environment variable to check if we should be sharing Peft model
 # weights.  When false we treat all Peft models as separate.
 peft_share_base_weights = (
-    os.environ.get("PEFT_SHARE_BASE_WEIGHTS", "false").lower() == "true"
+        os.environ.get("PEFT_SHARE_BASE_WEIGHTS", "false").lower() == "true"
 )
 
 
@@ -120,7 +120,7 @@ def get_model_adapter(model_path: str) -> BaseModelAdapter:
 
 
 def raise_warning_for_incompatible_cpu_offloading_configuration(
-    device: str, load_8bit: bool, cpu_offloading: bool
+        device: str, load_8bit: bool, cpu_offloading: bool
 ):
     if cpu_offloading:
         if not load_8bit:
@@ -146,16 +146,16 @@ def raise_warning_for_incompatible_cpu_offloading_configuration(
 
 
 def load_model(
-    model_path: str,
-    device: str = "cuda",
-    num_gpus: int = 1,
-    max_gpu_memory: Optional[str] = None,
-    load_8bit: bool = False,
-    cpu_offloading: bool = False,
-    gptq_config: Optional[GptqConfig] = None,
-    awq_config: Optional[AWQConfig] = None,
-    revision: str = "main",
-    debug: bool = False,
+        model_path: str,
+        device: str = "cuda",
+        num_gpus: int = 1,
+        max_gpu_memory: Optional[str] = None,
+        load_8bit: bool = False,
+        cpu_offloading: bool = False,
+        gptq_config: Optional[GptqConfig] = None,
+        awq_config: Optional[AWQConfig] = None,
+        revision: str = "main",
+        debug: bool = False,
 ):
     """Load a model from Hugging Face."""
     # get model adapter
@@ -204,7 +204,7 @@ def load_model(
 
         if "max_memory" in kwargs:
             kwargs["max_memory"]["cpu"] = (
-                str(math.floor(psutil.virtual_memory().available / 2**20)) + "Mib"
+                    str(math.floor(psutil.virtual_memory().available / 2 ** 20)) + "Mib"
             )
         kwargs["quantization_config"] = BitsAndBytesConfig(
             load_in_8bit_fp32_cpu_offload=cpu_offloading
@@ -227,7 +227,7 @@ def load_model(
             return model, tokenizer
     elif awq_config and awq_config.wbits < 16:
         assert (
-            awq_config.wbits == 4
+                awq_config.wbits == 4
         ), "Currently we only support 4-bit inference for AWQ."
         model, tokenizer = load_awq_quantized(model_path, awq_config, device)
         if num_gpus != 1:
@@ -268,8 +268,8 @@ def load_model(
     model, tokenizer = adapter.load_model(model_path, kwargs)
 
     if (device == "cuda" and num_gpus == 1 and not cpu_offloading) or device in (
-        "mps",
-        "xpu",
+            "mps",
+            "xpu",
     ):
         model.to(device)
 
@@ -310,23 +310,23 @@ def get_generate_stream_function(model: torch.nn.Module, model_path: str):
         # the right weights are available.
         @torch.inference_mode()
         def generate_stream_peft(
-            model,
-            tokenizer,
-            params: Dict,
-            device: str,
-            context_len: int,
-            stream_interval: int = 2,
-            judge_sent_end: bool = False,
+                model,
+                tokenizer,
+                params: Dict,
+                device: str,
+                context_len: int,
+                stream_interval: int = 2,
+                judge_sent_end: bool = False,
         ):
             model.set_adapter(model_path)
             for x in generate_stream(
-                model,
-                tokenizer,
-                params,
-                device,
-                context_len,
-                stream_interval,
-                judge_sent_end,
+                    model,
+                    tokenizer,
+                    params,
+                    device,
+                    context_len,
+                    stream_interval,
+                    judge_sent_end,
             ):
                 yield x
 
@@ -490,7 +490,7 @@ class PeftModelAdapter:
 
     def get_default_conv_template(self, model_path: str) -> Conversation:
         """Uses the conv template of the base model"""
-        from peft import PeftConfig, PeftModel
+        from peft import PeftConfig
 
         config = PeftConfig.from_pretrained(model_path)
         if "peft" in config.base_model_name_or_path:
@@ -500,6 +500,27 @@ class PeftModelAdapter:
         base_model_path = config.base_model_name_or_path
         base_adapter = get_model_adapter(base_model_path)
         return base_adapter.get_default_conv_template(config.base_model_name_or_path)
+
+
+class WizardVicunaAdapter(BaseModelAdapter):
+    "Model adapater for WizardVicuna models"
+
+    use_fast_tokenizer = True
+
+    def match(self, model_path: str):
+        return "wizard-vicuna" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        revision = from_pretrained_kwargs.get("revision", "main")
+        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=self.use_fast_tokenizer, revision=revision)
+        model = AutoModelForCausalLM.from_pretrained(model_path,
+                                                     trust_remote_code=True,
+                                                     device_map='auto',
+                                                     **from_pretrained_kwargs)
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("vicuna_v1.1")
 
 
 class VicunaAdapter(BaseModelAdapter):
