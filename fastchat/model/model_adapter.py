@@ -515,8 +515,7 @@ class WizardVicunaAdapter(BaseModelAdapter):
         tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=self.use_fast_tokenizer, revision=revision)
         model = AutoModelForCausalLM.from_pretrained(model_path,
                                                      trust_remote_code=True,
-                                                     device_map='auto',
-                                                     **from_pretrained_kwargs)
+                                                     device_map='auto')
         return model, tokenizer
 
     def get_default_conv_template(self, model_path: str) -> Conversation:
