@@ -24,6 +24,7 @@ from transformers import (
     LlamaForCausalLM,
     T5Tokenizer,
 )
+from auto_gptq import AutoGPTQForCausalLM, BaseQuantizeConfig
 
 from fastchat.modules.gptq import GptqConfig, load_gptq_quantized
 from fastchat.modules.awq import AWQConfig, load_awq_quantized
@@ -500,6 +501,31 @@ class PeftModelAdapter:
         base_model_path = config.base_model_name_or_path
         base_adapter = get_model_adapter(base_model_path)
         return base_adapter.get_default_conv_template(config.base_model_name_or_path)
+
+
+class WizardVicunaGPTQAdapter(BaseModelAdapter):
+    "Model adapater for WizardVicuna models"
+
+    use_fast_tokenizer = True
+    use_triton = False
+
+    def match(self, model_path: str):
+        return "wizard-vicuna" in model_path.lower() and "gptq" in model_path.lower()
+
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        revision = from_pretrained_kwargs.get("revision", "main")
+        tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=self.use_fast_tokenizer, revision=revision)
+        model = AutoGPTQForCausalLM.from_quantized(model_path,
+                                                   model_basename=os.path.basename(model_path),
+                                                   use_safetensors=True,
+                                                   trust_remote_code=True,
+                                                   device_map='auto',
+                                                   use_triton=self.use_triton,
+                                                   quantize_config=None)
+        return model, tokenizer
+
+    def get_default_conv_template(self, model_path: str) -> Conversation:
+        return get_conv_template("vicuna_v1.1")
 
 
 class WizardVicunaAdapter(BaseModelAdapter):
