@@ -1512,6 +1512,7 @@ class VigogneChatAdapter(BaseModelAdapter):
 # Note: the registration order matters.
 # The one registered earlier has a higher matching priority.
 register_model_adapter(PeftModelAdapter)
+register_model_adapter(WizardVicunaGPTQAdapter)
 register_model_adapter(WizardVicunaAdapter)
 register_model_adapter(VicunaAdapter)
 register_model_adapter(AiroborosAdapter)
