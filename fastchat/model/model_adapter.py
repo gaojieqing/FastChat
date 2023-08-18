@@ -516,7 +516,7 @@ class WizardVicunaGPTQAdapter(BaseModelAdapter):
         revision = from_pretrained_kwargs.get("revision", "main")
         tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=self.use_fast_tokenizer, revision=revision)
         model = AutoGPTQForCausalLM.from_quantized(model_path,
-                                                   model_basename=os.path.basename(model_path),
+                                                   model_basename='wizard-vicuna-13b-uncensored-superhot-8k-GPTQ-4bit-128g.no-act.order',
                                                    use_safetensors=True,
                                                    trust_remote_code=True,
                                                    device_map='auto',
