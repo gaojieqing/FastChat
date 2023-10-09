@@ -34,6 +34,7 @@ IDENTITY_WORDS = [
     "palm",
     "lamda",
     "google",
+    "llama",
     "NETWORK ERROR DUE TO HIGH TRAFFIC. PLEASE REGENERATE OR REFRESH THIS PAGE.",
 ]
 
@@ -43,12 +44,8 @@ for i in range(len(IDENTITY_WORDS)):
 
 def get_log_files(max_num_files=None):
     dates = []
-    for month in [4, 5, 6, 7]:
-        for day in range(1, 32):
-            dates.append(f"2023-{month:02d}-{day:02d}")
-
-    for month in [8]:
-        for day in range(1, 32):
+    for month in range(4, 12):
+        for day in range(1, 33):
             dates.append(f"2023-{month:02d}-{day:02d}")
 
     filenames = []
@@ -76,7 +73,16 @@ def to_openai_format(messages):
     return ret
 
 
-def clean_battle_data(log_files):
+def replace_model_name(old_name):
+    return (
+        old_name.replace("bard", "palm-2")
+        .replace("claude-v1", "claude-1")
+        .replace("claude-instant-v1", "claude-instant-1")
+        .replace("oasst-sft-1-pythia-12b", "oasst-pythia-12b")
+    )
+
+
+def clean_battle_data(log_files, exclude_model_names):
     data = []
     for filename in tqdm(log_files, desc="read files"):
         for retry in range(5):
@@ -162,12 +168,12 @@ def clean_battle_data(log_files):
             continue
 
         # Replace bard with palm
-        models = [
-            m.replace("bard", "palm-2")
-            .replace("claude-v1", "claude-1")
-            .replace("claude-instant-v1", "claude-instant-1")
-            for m in models
-        ]
+        models = [replace_model_name(m) for m in models]
+
+        # Exclude certain models
+        if any(x in exclude_model_names for x in models):
+            ct_invalid += 1
+            continue
 
         question_id = row["states"][0]["conv_id"]
         conversation_a = to_openai_format(
@@ -182,7 +188,7 @@ def clean_battle_data(log_files):
             all_ips[ip] = len(all_ips)
         user_id = all_ips[ip]
 
-        # Save the result
+        # Save the results
         battles.append(
             dict(
                 question_id=question_id,
@@ -224,10 +230,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--mode", type=str, choices=["simple", "conv_release"], default="simple"
     )
+    parser.add_argument("--exclude-model-names", type=str, nargs="+")
     args = parser.parse_args()
 
     log_files = get_log_files(args.max_num_files)
-    battles = clean_battle_data(log_files)
+    battles = clean_battle_data(log_files, args.exclude_model_names or [])
     last_updated_tstamp = battles[-1]["tstamp"]
     cutoff_date = datetime.datetime.fromtimestamp(
         last_updated_tstamp, tz=timezone("US/Pacific")

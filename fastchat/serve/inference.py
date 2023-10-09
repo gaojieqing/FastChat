@@ -66,6 +66,9 @@ def generate_stream(
     stream_interval: int = 2,
     judge_sent_end: bool = False,
 ):
+    if hasattr(model, "device"):
+        device = model.device
+
     # Read parameters
     prompt = params["prompt"]
     len_prompt = len(prompt)
@@ -77,7 +80,8 @@ def generate_stream(
     echo = bool(params.get("echo", True))
     stop_str = params.get("stop", None)
     stop_token_ids = params.get("stop_token_ids", None) or []
-    stop_token_ids.append(tokenizer.eos_token_id)
+    if tokenizer.eos_token_id not in stop_token_ids:
+        stop_token_ids.append(tokenizer.eos_token_id)
 
     logits_processor = prepare_logits_processor(
         temperature, repetition_penalty, top_p, top_k
@@ -105,6 +109,7 @@ def generate_stream(
 
     past_key_values = out = None
     sent_interrupt = False
+    finish_reason = None
     for i in range(max_new_tokens):
         if i == 0:  # prefill
             if model.config.is_encoder_decoder:
@@ -122,7 +127,8 @@ def generate_stream(
             if model.config.is_encoder_decoder:
                 out = model.decoder(
                     input_ids=torch.as_tensor(
-                        [[token] if not sent_interrupt else output_ids], device=device
+                        [[token] if not sent_interrupt else output_ids],
+                        device=device,
                     ),
                     encoder_hidden_states=encoder_output,
                     use_cache=True,
@@ -134,7 +140,8 @@ def generate_stream(
             else:
                 out = model(
                     input_ids=torch.as_tensor(
-                        [[token] if not sent_interrupt else output_ids], device=device
+                        [[token] if not sent_interrupt else output_ids],
+                        device=device,
                     ),
                     use_cache=True,
                     past_key_values=past_key_values if not sent_interrupt else None,
@@ -235,12 +242,11 @@ def generate_stream(
             break
 
     # Finish stream event, which contains finish reason
-    if i == max_new_tokens - 1:
-        finish_reason = "length"
-    elif stopped:
-        finish_reason = "stop"
     else:
-        finish_reason = None
+        finish_reason = "length"
+
+    if stopped:
+        finish_reason = "stop"
 
     yield {
         "text": output,
@@ -258,6 +264,8 @@ def generate_stream(
     torch.cuda.empty_cache()
     if device == "xpu":
         torch.xpu.empty_cache()
+    if device == "npu":
+        torch.npu.empty_cache()
 
 
 class ChatIO(abc.ABC):
@@ -283,6 +291,7 @@ def chat_loop(
     device: str,
     num_gpus: int,
     max_gpu_memory: str,
+    dtype: Optional[torch.dtype],
     load_8bit: bool,
     cpu_offloading: bool,
     conv_template: Optional[str],
@@ -304,6 +313,7 @@ def chat_loop(
         device=device,
         num_gpus=num_gpus,
         max_gpu_memory=max_gpu_memory,
+        dtype=dtype,
         load_8bit=load_8bit,
         cpu_offloading=cpu_offloading,
         gptq_config=gptq_config,
