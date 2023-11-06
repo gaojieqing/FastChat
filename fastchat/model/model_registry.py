@@ -153,6 +153,12 @@ register_model_info(
     "an Open Assistant for everyone by LAION",
 )
 register_model_info(
+    ["openchat_3.5"],
+    "OpenChat 3.5",
+    "https://github.com/imoneoi/openchat",
+    "OpenChat 3.5 is a versatile, open-source language model fine-tuned using C-RLFT",
+)
+register_model_info(
     ["llama-7b", "llama-13b"],
     "LLaMA",
     "https://arxiv.org/abs/2302.13971",
@@ -325,6 +331,7 @@ register_model_info(
     "https://huggingface.co/HuggingFaceH4/zephyr-7b-alpha",
     "a chatbot fine-tuned from Mistral by Hugging Face",
 )
+
 register_model_info(
     [
         "Xwin-LM-7B-V0.1",
@@ -336,4 +343,29 @@ register_model_info(
     "Xwin-LM",
     "https://github.com/Xwin-LM/Xwin-LM",
     "Chat models developed by Xwin-LM team",
+)
+
+register_model_info(
+    ["lemur-70b-chat"],
+    "Lemur-Chat",
+    "https://huggingface.co/OpenLemur/lemur-70b-chat-v1",
+    "an openly accessible language model optimized for both natural language and coding capabilities ",
+)
+
+register_model_info(
+    ["Mistral-7B-OpenOrca"],
+    "Open-Orca",
+    "https://huggingface.co/Open-Orca/Mistral-7B-OpenOrca",
+    "A fine-tune of [Mistral 7B](https://huggingface.co/mistralai/Mistral-7B-v0.1) using [OpenOrca dataset](https://huggingface.co/datasets/Open-Orca/OpenOrca)",
+)
+
+register_model_info(
+    [
+        "AquilaChat-7B",
+        "AquilaChat2-7B",
+        "AquilaChat2-34B",
+    ],
+    "Aquila-Chat",
+    "https://huggingface.co/BAAI/AquilaChat2-34B",
+    "Chat models developed by BAAI team",
 )
